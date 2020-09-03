@@ -1,9 +1,12 @@
 using DotNet.GraphQL.CosmosDB.Types.Models;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 using Microsoft.Azure.Documents.Linq;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace DotNet.GraphQL.CosmosDB.Types
@@ -30,6 +33,26 @@ namespace DotNet.GraphQL.CosmosDB.Types
 
             return quizzes;
         }
+
+        public async Task<QuestionModel> GetQuestion(IResolverContext context, string id)
+        {
+            var client = (DocumentClient)context.ContextData["client"];
+
+            var collectionUri = UriFactory.CreateDocumentCollectionUri("trivia", "questions");
+            var query = client.CreateDocumentQuery<QuestionModel>(collectionUri, new FeedOptions { EnableCrossPartitionQuery = true })
+                .Where(q => q.Id == id)
+                .AsDocumentQuery();
+
+            while (query.HasMoreResults)
+            {
+                foreach (var result in await query.ExecuteNextAsync<QuestionModel>())
+                {
+                    return result;
+                }
+            }
+
+            throw new ArgumentException("ID does not match a question in the database");
+        }
     }
 
     public class QueryType : ObjectType<Query>
@@ -39,6 +62,10 @@ namespace DotNet.GraphQL.CosmosDB.Types
             descriptor.Field(q => q.GetQuestions(default!))
                 .Description("Get all questions in the system")
                 .Type<NonNullType<ListType<NonNullType<QuestionType>>>>();
+
+            descriptor.Field(q => q.GetQuestion(default!, default!))
+                .Description("Get a question")
+                .Type<NonNullType<QuestionType>>();
         }
     }
 
