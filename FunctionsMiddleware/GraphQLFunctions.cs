@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using HotChocolate.Execution;
@@ -5,7 +6,6 @@ using HotChocolate.Language;
 using HotChocolate.Server;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Documents.Client;
 
 namespace HotChocolate.AspNetCore
 {
@@ -36,11 +36,11 @@ namespace HotChocolate.AspNetCore
         }
 
         public async Task<IActionResult> ExecuteFunctionsQueryAsync(
-            HttpContext context,
-            DocumentClient client,
+            HttpContext httpContext,
+            IDictionary<string, object> context,
             CancellationToken cancellationToken)
         {
-            using var stream = context.Request.Body;
+            using var stream = httpContext.Request.Body;
 
             var requestQuery = await _requestParser
                 .ReadJsonRequestAsync(stream, cancellationToken)
@@ -53,10 +53,14 @@ namespace HotChocolate.AspNetCore
                 var firstQuery = requestQuery[0];
 
                 builder
-                    .AddProperty("client", client)
                     .SetQuery(firstQuery.Query)
                     .SetOperation(firstQuery.OperationName)
                     .SetQueryName(firstQuery.QueryName);
+
+                foreach (var item in context)
+                {
+                    builder.AddProperty(item.Key, item.Value);
+                }
 
                 if (firstQuery.Variables != null
                     && firstQuery.Variables.Count > 0)
@@ -66,7 +70,7 @@ namespace HotChocolate.AspNetCore
             }
 
             var result = await Executor.ExecuteAsync(builder.Create());
-            await _jsonQueryResultSerializer.SerializeAsync((IReadOnlyQueryResult)result, context.Response.Body);
+            await _jsonQueryResultSerializer.SerializeAsync((IReadOnlyQueryResult)result, httpContext.Response.Body);
 
             return new EmptyResult();
         }

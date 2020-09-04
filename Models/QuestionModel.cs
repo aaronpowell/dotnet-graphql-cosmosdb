@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace DotNet.GraphQL.CosmosDB.Types.Models
+namespace DotNet.GraphQL.CosmosDB.Models
 {
     public class QuestionModel
     {

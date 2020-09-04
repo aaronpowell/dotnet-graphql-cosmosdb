@@ -4,6 +4,7 @@ using HotChocolate.Language;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Documents.Client;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -16,8 +17,8 @@ namespace HotChocolate.AspNetCore
         IDocumentHashProvider DocumentHashProvider { get; }
         IQueryExecutor Executor { get; }
         Task<IActionResult> ExecuteFunctionsQueryAsync(
-            HttpContext context,
-            DocumentClient client,
+            HttpContext httpContext,
+            IDictionary<string, object> context,
             CancellationToken cancellationToken);
     }
 }
